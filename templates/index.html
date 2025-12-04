@@ -361,7 +361,7 @@
         let qrCycleInterval = null;
         let currentQRNumber = 0;
         let totalQRCodes = 0;
-        let qrCycleSpeed = 100;
+        let qrCycleSpeed = 50;
         let uploadData = null; // Store upload response data for test transfer
         
         function updateBlockSizeInfo() {
@@ -558,16 +558,16 @@
                     // Calculate QR code size based on data length
                     // More data = denser QR code, so we might need to adjust size
                     const dataLength = qrData.length;
-                    let qrWidth = 300;
-                    let qrHeight = 300;
+                    let qrWidth = 500;  // Increased from 300 for easier capture
+                    let qrHeight = 500; // Increased from 300 for easier capture
                     
                     // Adjust size based on data length to maintain readability
                     if (dataLength > 500) {
-                        qrWidth = 400;
-                        qrHeight = 400;
+                        qrWidth = 600;  // Increased from 400 for easier capture
+                        qrHeight = 600; // Increased from 400 for easier capture
                     } else if (dataLength > 300) {
-                        qrWidth = 350;
-                        qrHeight = 350;
+                        qrWidth = 550;  // Increased from 350 for easier capture
+                        qrHeight = 550; // Increased from 350 for easier capture
                     }
                     
                     console.log(`Generating QR code: ${dataLength} chars, size: ${qrWidth}x${qrHeight}`);
@@ -576,8 +576,8 @@
                         text: qrData,
                         width: qrWidth,
                         height: qrHeight,
-                        colorDark: '#667eea',
-                        colorLight: '#ffffff',
+                        colorDark: '#000000',  // Black for better contrast
+                        colorLight: '#ffffff', // White background
                         // Using level M (Medium) instead of H (High) to fit more data
                         // Level M: 15% error correction, Level H: 30% error correction
                         // Level M still provides good reliability while allowing more data
