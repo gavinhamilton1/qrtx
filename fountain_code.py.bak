@@ -7,55 +7,6 @@ import hashlib
 from typing import Dict, Optional, List
 
 
-class SimpleRNG:
-    """
-    Simple, portable Linear Congruential Generator (LCG)
-    Works identically in Python and Kotlin/Java for cross-platform compatibility.
-    
-    Uses parameters from Numerical Recipes (L'Ecuyer parameters):
-    multiplier = 1664525
-    increment = 1013904223
-    modulus = 2^32
-    """
-    
-    def __init__(self, seed: int):
-        # Ensure seed is 32-bit unsigned
-        self.state = seed & 0xFFFFFFFF
-    
-    def next_int(self, bound: int) -> int:
-        """Generate random integer in range [0, bound)"""
-        if bound <= 0:
-            raise ValueError("bound must be positive")
-        
-        # Generate next random number
-        self.state = ((self.state * 1664525 + 1013904223) & 0xFFFFFFFF)
-        
-        # Scale to range [0, bound) - simple modulo is fine for our use case
-        return self.state % bound
-    
-    def randint(self, a: int, b: int) -> int:
-        """Generate random integer in range [a, b] (inclusive on both ends)"""
-        if a > b:
-            raise ValueError("a must be <= b")
-        return a + self.next_int(b - a + 1)
-    
-    def sample(self, population: list, k: int) -> list:
-        """Randomly sample k items from population without replacement"""
-        if k > len(population):
-            raise ValueError("Sample larger than population")
-        if k < 0:
-            raise ValueError("Sample size must be non-negative")
-        
-        result = []
-        available = list(population)  # Copy
-        
-        for _ in range(k):
-            index = self.next_int(len(available))
-            result.append(available.pop(index))
-        
-        return result
-
-
 class LTEncoder:
     """Luby Transform Encoder for fountain codes"""
     
@@ -91,19 +42,17 @@ class LTEncoder:
         Returns:
             Dictionary with seed, data (base64), num_blocks, and file_size
         """
-        # Generate random seed (use Python's random for seed generation only)
+        # Generate random seed
         seed = random.randint(0, 2**31 - 1)
-        
-        # Use portable SimpleRNG for deterministic, cross-platform compatible randomness
-        rng = SimpleRNG(seed)
+        random.seed(seed)
         
         # Select random blocks to XOR together
         selected_blocks = []
         # Use a simple probability distribution (more blocks selected as we go)
-        num_to_select = rng.randint(1, min(self.num_blocks, 10))
+        num_to_select = random.randint(1, min(self.num_blocks, 10))
         
         # Select random block indices
-        block_indices = rng.sample(list(range(self.num_blocks)), num_to_select)
+        block_indices = random.sample(range(self.num_blocks), num_to_select)
         
         # XOR selected blocks together
         result = bytearray(self.block_size)
@@ -164,10 +113,10 @@ class LTDecoder:
         droplet_data = base64.b64decode(droplet["data"])
         seed = droplet["seed"]
         
-        # Reconstruct which blocks were XORed using portable SimpleRNG
-        rng = SimpleRNG(seed)
-        num_to_select = rng.randint(1, min(self.num_blocks, 10))
-        block_indices = rng.sample(list(range(self.num_blocks)), num_to_select)
+        # Reconstruct which blocks were XORed
+        random.seed(seed)
+        num_to_select = random.randint(1, min(self.num_blocks, 10))
+        block_indices = random.sample(range(self.num_blocks), num_to_select)
         
         # Simplified decoding: if droplet contains only one unknown block, solve it
         unknown_indices = [idx for idx in block_indices if idx not in self.solved_blocks]

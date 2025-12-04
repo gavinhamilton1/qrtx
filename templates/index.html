@@ -288,12 +288,12 @@
                     <div style="margin: 10px 0;">
                         <label for="qr-speed" style="font-size: 0.9em; color: #666;">Cycle Speed: </label>
                         <select id="qr-speed" onchange="updateQRSpeed()" style="padding: 5px 10px; border: 2px solid #667eea; border-radius: 5px; font-size: 0.9em;">
-                            <option value="100">Super Fast (100ms)</option>
+                            <option value="100" selected>Super Fast (100ms)</option>
                             <option value="200">Very Fast (200ms)</option>
                             <option value="1500">Fast (1.5s)</option>
                             <option value="2000">Balanced (2s)</option>
                             <option value="2500">Comfortable (2.5s)</option>
-                            <option value="3000" selected>Slow (3s)</option>
+                            <option value="3000">Slow (3s)</option>
                         </select>
                     </div>
                     <button class="btn" onclick="startTransfer()" id="start-transfer-btn">▶️ Start Transfer</button>
@@ -361,7 +361,7 @@
         let qrCycleInterval = null;
         let currentQRNumber = 0;
         let totalQRCodes = 0;
-        let qrCycleSpeed = 3000;
+        let qrCycleSpeed = 100;
         let uploadData = null; // Store upload response data for test transfer
         
         function updateBlockSizeInfo() {
