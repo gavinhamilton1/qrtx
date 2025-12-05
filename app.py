@@ -106,9 +106,9 @@ async def upload(request: Request):
             print(f"Warning: Could not convert block_size '{block_size_str}' to int, using default 256")
             block_size = 256  # Default if invalid
         
-        valid_block_sizes = [128, 256, 512, 1024]
-        if block_size not in valid_block_sizes:
-            raise HTTPException(status_code=400, detail=f"Invalid block_size. Must be one of: {valid_block_sizes}")
+        # Block size validation removed - allow any positive integer
+        if block_size <= 0:
+            raise HTTPException(status_code=400, detail="block_size must be a positive integer")
         
         # Read the file content
         content = await file.read()

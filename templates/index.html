@@ -217,7 +217,9 @@
                     <option value="128">128 bytes (~200 chars) - Small QR codes</option>
                     <option value="256" >256 bytes (~415 chars) - Balanced (Recommended)</option>
                     <option value="512">512 bytes (~755 chars) - Large QR codes</option>
-                    <option value="1024" selected>1024 bytes (~1,400 chars) - Very large QR codes</option>
+                    <option value="1024" selected>1024 bytes (~1,400 chars) - Large QR codes</option>
+                    <option value="2048">2048 bytes (~2,800 chars) - Extra large QR codes (experimental)</option>
+                    <option value="3072" disabled>3072 bytes (~4,200 chars) - Too large for QR codes</option>
                 </select>
             </div>
             
@@ -265,11 +267,14 @@
         function updateBlockSizeInfo() {
             const blockSize = parseInt(document.getElementById('block-size').value);
             const info = document.getElementById('block-size-info');
+            if (!info) return; // Element might not exist
             const estimates = {
                 128: '~200 JSON chars - Small, easy to scan QR codes',
                 256: '~415 JSON chars - Balanced size and density',
                 512: '~755 JSON chars - Larger, denser QR codes',
-                1024: '~1,400 JSON chars - Very large, very dense QR codes'
+                1024: '~1,400 JSON chars - Very large, very dense QR codes',
+                2048: '~2,800 JSON chars - Extra large, maximum recommended',
+                3072: '~4,200 JSON chars - Too large (exceeds QR code limit)'
             };
             info.textContent = estimates[blockSize] + ' | Larger = fewer total QR codes needed';
         }
@@ -403,9 +408,21 @@
             
             // Use QRCode constructor (this library uses constructor pattern)
             try {
+                // Check if data is too large for QR code
+                // QR Code Version 40 (max) theoretical capacities:
+                // Level L (Low): ~7,089 numeric, ~4,296 alphanumeric, ~2,953 bytes
+                // Level M (Medium): ~5,596 numeric, ~3,391 alphanumeric, ~2,331 bytes
+                // Level Q (Quartile): ~4,391 numeric, ~2,660 alphanumeric, ~1,830 bytes
+                // Level H (High): ~3,057 numeric, ~1,852 alphanumeric, ~1,273 bytes
+                // In practice, this library may fail around ~2,800-3,200 chars even with Level L
+                const dataLength = qrData.length;
+                const MAX_SAFE_LENGTH = 3000; // Increased limit for Level L
+                if (dataLength > MAX_SAFE_LENGTH) {
+                    throw new Error(`Data too large (${dataLength} chars). Maximum is ~${MAX_SAFE_LENGTH} characters for reliable QR code generation. Please use a smaller block size.`);
+                }
+                
                 // Calculate QR code size based on data length
                 // More data = denser QR code, so we might need to adjust size
-                const dataLength = qrData.length;
                 let qrWidth = 500;  // Increased from 300 for easier capture
                 let qrHeight = 500; // Increased from 300 for easier capture
                 
@@ -417,6 +434,17 @@
                     qrWidth = 550;  // Increased from 350 for easier capture
                     qrHeight = 550; // Increased from 350 for easier capture
                 }
+                
+                // Ensure CorrectLevel is available - try Level L first (highest capacity)
+                let correctLevel = QRCode.CorrectLevel.L; // Level L: 7% error correction, highest data capacity
+                if (!QRCode.CorrectLevel || QRCode.CorrectLevel.L === undefined) {
+                    // Fallback to Level M if L is not available
+                    if (QRCode.CorrectLevel && QRCode.CorrectLevel.M !== undefined) {
+                        correctLevel = QRCode.CorrectLevel.M;
+                    } else {
+                        throw new Error('QRCode.CorrectLevel is not available. QR code library may not be loaded correctly.');
+                    }
+                }
                                 
                 new QRCode(qrDiv, {
                     text: qrData,
@@ -424,14 +452,34 @@
                     height: qrHeight,
                     colorDark: '#000000',  // Black for better contrast
                     colorLight: '#ffffff', // White background
-                    // Using level M (Medium) instead of H (High) to fit more data
-                    // Level M: 15% error correction, Level H: 30% error correction
-                    // Level M still provides good reliability while allowing more data
-                    correctLevel: QRCode.CorrectLevel.M
+                    // Using level L (Low) for maximum data capacity
+                    // Level L: 7% error correction (lowest), allows ~2,953 bytes vs Level M's ~2,331 bytes
+                    // Still provides reasonable reliability for clean scanning environments
+                    correctLevel: correctLevel
                 });
             } catch (error) {
                 console.error('QR code generation error:', error);
-                qrContainer.innerHTML = '<p style="color: red;">Error generating QR code: ' + error.message + '</p>';
+                console.error('Data length:', qrData.length);
+                console.error('Droplet block_size:', droplet.block_size);
+                console.error('Droplet:', droplet);
+                
+                // Provide user-friendly error message
+                let errorMsg = error.message;
+                if (errorMsg.includes('Cannot read properties') || errorMsg.includes('undefined')) {
+                    errorMsg = `QR code data too large (${qrData.length} chars). The QR code library cannot handle this size. Please use a smaller block size (max 1024 bytes recommended).`;
+                }
+                
+                qrContainer.innerHTML = `
+                    <div style="color: red; padding: 20px; background: #ffe6e6; border-radius: 10px; border: 2px solid #ff9999;">
+                        <p style="font-weight: bold; margin-bottom: 10px;">⚠️ Error generating QR code</p>
+                        <p>${errorMsg}</p>
+                        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                            Current block size: ${droplet.block_size || 'unknown'} bytes<br>
+                            JSON size: ${qrData.length} characters<br>
+                            <strong>Please reset and select a smaller block size (1024 bytes or less).</strong>
+                        </p>
+                    </div>
+                `;
             }
         }
         
